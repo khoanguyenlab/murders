@@ -83,3 +83,73 @@ h <- read_html(url)
 tab <- html_nodes(h, "table")
 tab
 html_table(tab, fill=T)
+
+#Case Study: Extracting a Table from a PDF
+library("pdftools")
+temp_file <- tempfile()
+url <- "https://www.pnas.org/action/downloadSupplement?doi=10.1073%2Fpnas.1510159112&file=pnas.201510159SI.pdf"
+download.file(url, temp_file)
+txt <- pdf_text(temp_file)
+file.remove(temp_file)
+raw_data_research_funding_rates <- txt[2]
+data("raw_data_research_funding_rates")
+raw_data_research_funding_rates %>% head
+tab <- str_split(raw_data_research_funding_rates, "\n")
+tab <- tab[[1]]
+tab
+tab %>% head
+the_names_1 <- tab[3]
+the_names_2 <- tab[4]
+the_names_1
+the_names_1 <- the_names_1 %>%
+  str_trim() %>%
+  str_replace_all(",\\s.", "") %>%
+  str_split("\\s{2,}", simplify = TRUE)
+the_names_1
+the_names_2
+the_names_2 <- the_names_2 %>%
+  str_trim() %>%
+  str_split("\\s+", simplify = TRUE)
+the_names_2
+tmp_names <- str_c(rep(the_names_1, each = 3), the_names_2[-1], sep = "_")
+the_names <- c(the_names_2[1], tmp_names) %>%
+  str_to_lower() %>%
+  str_replace_all("\\s", "_")
+the_names
+new_research_funding_rates <- tab[6:14] %>%
+  str_trim %>%
+  str_split("\\s{2,}", simplify = TRUE) %>%
+  data.frame(stringsAsFactors = FALSE) %>%
+  setNames(the_names) %>%
+  mutate_at(-1, parse_number)
+new_research_funding_rates %>% head()
+
+#Assessment Part 2: String Processing Part 3
+#Import raw Brexit referendum polling data from Wikipedia
+library(rvest)
+library(tidyverse)
+library(stringr)
+polls
+
+polls <- polls %>% 
+  filter(str_detect(Remain,"%"))
+colnames(polls) <- c("dates", "remain", "leave", "undecided", "lead", "samplesize", "pollster", "poll_type", "notes")
+as.numeric(polls$remain)/100
+as.numeric(str_remove(polls$remain, "%"))/100
+parse_number(polls$remain)/100
+as.numeric(str_remove(polls$remain, "%"))
+polls
+
+#Option 1
+temp <- str_extract_all(polls$dates,"\\d+\\s[a-zA-Z]+")
+end_date <- sapply(temp, function(x) x[length(x)]) # take last element (handles polls that cross month boundaries)
+end_date
+
+#option 2
+"[0-9]+\\s[a-zA-Z]+"
+
+#Option 3
+"\\d{1,2}\\s[a-zA-Z]+"
+
+#Option 4
+"\\d+\\s[a-zA-Z]{3,5}"
